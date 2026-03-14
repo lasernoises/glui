@@ -10,6 +10,10 @@ export function body() {
   return document.body;
 }
 
+export function elementEq(a, b) {
+  return a === b;
+}
+
 export function appendChild(element, child) {
   element.appendChild(child);
   return element;
@@ -34,6 +38,7 @@ export function setEventHandler(element, event, handler) {
 
 export function contextualizeEventHandler(handler, element) {
   return {
+    ...handler,
     path: List$NonEmpty(element, handler.path),
   };
 }

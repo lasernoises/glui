@@ -1,15 +1,16 @@
 import dom
 import gleam/list
+import gleam/option.{type Option, None}
 import widget.{type Widget}
 
 pub fn element(
   tag_name: String,
   attributes: List(#(String, String)),
-  events: List(#(String, dom.EventHandler)),
+  on_click: fn(in, dom.EventContent) -> Option(out),
   content: List(Widget(in, out)),
 ) -> Widget(in, out) {
   widget.new(
-    create: fn(reactivity, in) {
+    create: fn(reactivity, event_handler, in) {
       let element = dom.create_element(tag_name)
 
       attributes
@@ -18,17 +19,19 @@ pub fn element(
         element |> dom.set_attribute(attribute, value)
       })
 
-      events
-      |> list.each(fn(event) {
-        let #(event, handler) = event
-        element |> dom.set_event_handler(event, handler)
-      })
+      element
+      |> dom.set_event_handler("click", event_handler)
 
       let #(reactivity, content_state) =
         content
         |> list.map_fold(reactivity, fn(reactivity, widget) {
           let #(state, widget_element, reactivity) =
-            widget |> widget.create(reactivity, in)
+            widget
+            |> widget.create(
+              reactivity,
+              dom.contextualize_event_handler(event_handler, element),
+              in,
+            )
 
           element |> dom.append_child(widget_element)
 
@@ -37,31 +40,76 @@ pub fn element(
 
       #(content_state, element, reactivity)
     },
-    update: fn(content_state, reactivity, in, _element) {
+    update: fn(content_state, reactivity, event_handler, _element, in) {
       let #(reactivity, content_state) =
         content_state
         |> list.map_fold(reactivity, fn(reactivty, state) {
           let #(state, element) = state
           let #(state, reactivity) =
-            state |> widget.update(reactivty, in, element)
+            state |> widget.update(reactivty, event_handler, element, in)
 
           #(reactivity, #(state, element))
         })
 
       #(content_state, reactivity)
     },
+    handle_event: fn(
+      content_state,
+      reactivity,
+      event_handler,
+      _element,
+      in,
+      event,
+    ) {
+      case event.path {
+        [] -> #(content_state, reactivity, on_click(in, event.content))
+        [first, ..rest] -> {
+          let #(#(reactivity, out), content_state) =
+            content_state
+            // TODO: something more efficient
+            |> list.map_fold(#(reactivity, None), fn(acc, x) {
+              case dom.element_eq(x.1, first) {
+                True -> {
+                  let #(reactivity, _) = acc
+                  let #(state, child_element) = x
+                  let #(state, reactivity, out) =
+                    state
+                    |> widget.handle_event(
+                      reactivity,
+                      dom.contextualize_event_handler(
+                        event_handler,
+                        child_element,
+                      ),
+                      child_element,
+                      in,
+                      dom.Event(rest, event.content),
+                    )
+
+                  #(#(reactivity, out), #(state, child_element))
+                }
+                False -> #(acc, x)
+              }
+            })
+
+          #(content_state, reactivity, out)
+        }
+      }
+    },
   )
 }
 
 pub fn text(text: String) -> Widget(in, out) {
   widget.new(
-    create: fn(reactivity, _in) {
+    create: fn(reactivity, _, _in) {
       let element =
         dom.create_element("span")
         |> dom.set_text_content(text)
 
       #(Nil, element, reactivity)
     },
-    update: fn(_, reactivity, _in, _element) { #(Nil, reactivity) },
+    update: fn(_, reactivity, _, _, _in) { #(Nil, reactivity) },
+    handle_event: fn(_, reactivity, _, _, _in, _event) {
+      #(Nil, reactivity, None)
+    },
   )
 }

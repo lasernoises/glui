@@ -16,6 +16,9 @@ pub fn create_element(tag: String) -> Element
 @external(javascript, "./dom_ffi.mjs", "body")
 pub fn body() -> Element
 
+@external(javascript, "./dom_ffi.mjs", "elementEq")
+pub fn element_eq(a: Element, b: Element) -> Bool
+
 @external(javascript, "./dom_ffi.mjs", "appendChild")
 pub fn append_child(element: Element, child: Element) -> Element
 
