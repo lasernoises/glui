@@ -64,6 +64,9 @@ pub fn my_widget() -> widget.Widget(in, String) {
         html.rx_text(fn(a: ComponentInput(_, _)) {
           reactivity.rx_get(a.state, int.to_string)
         }),
+        html.rx_text(fn(a: ComponentInput(_, _)) {
+          reactivity.rx_get(a.state, fn(_) { "abc" })
+        }),
         html.element(
           "button",
           [],
