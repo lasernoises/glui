@@ -31,7 +31,8 @@ export function setTextContent(element, text) {
 
 export function setEventHandler(element, event, handler) {
   const path = reverse(handler.path);
-  element.addEventListener(event, (_) => {
+  element.addEventListener(event, (event) => {
+    event.stopPropagation();
     handler.update(Event$Event(path, EventContent$Click()));
   });
 }

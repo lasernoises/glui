@@ -19,6 +19,9 @@ pub fn element(
         element |> dom.set_attribute(attribute, value)
       })
 
+      let event_handler =
+        dom.contextualize_event_handler(event_handler, element)
+
       element
       |> dom.set_event_handler("click", event_handler)
 
@@ -27,11 +30,7 @@ pub fn element(
         |> list.map_fold(reactivity, fn(reactivity, widget) {
           let #(state, widget_element, reactivity) =
             widget
-            |> widget.create(
-              reactivity,
-              dom.contextualize_event_handler(event_handler, element),
-              in,
-            )
+            |> widget.create(reactivity, event_handler, in)
 
           element |> dom.append_child(widget_element)
 
@@ -57,13 +56,16 @@ pub fn element(
       content_state,
       reactivity,
       event_handler,
-      _element,
+      element,
       in,
       event,
     ) {
       case event.path {
         [] -> #(content_state, reactivity, on_click(in, event.content))
         [first, ..rest] -> {
+          let event_handler =
+            dom.contextualize_event_handler(event_handler, element)
+
           let #(#(reactivity, out), content_state) =
             content_state
             // TODO: something more efficient
@@ -71,21 +73,18 @@ pub fn element(
               case dom.element_eq(x.1, first) {
                 True -> {
                   let #(reactivity, _) = acc
-                  let #(state, child_element) = x
+                  let #(state, widget_element) = x
                   let #(state, reactivity, out) =
                     state
                     |> widget.handle_event(
                       reactivity,
-                      dom.contextualize_event_handler(
-                        event_handler,
-                        child_element,
-                      ),
-                      child_element,
+                      event_handler,
+                      widget_element,
                       in,
                       dom.Event(rest, event.content),
                     )
 
-                  #(#(reactivity, out), #(state, child_element))
+                  #(#(reactivity, out), #(state, widget_element))
                 }
                 False -> #(acc, x)
               }

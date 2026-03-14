@@ -1,6 +1,8 @@
 import dom
 import gleam/io
+import gleam/list
 import gleam/option.{Some}
+import gleam/result
 import reactivity
 import widget
 import widgets/html
@@ -20,6 +22,13 @@ pub fn main() -> Nil {
     },
     fn(x, handler, event) {
       let #(state, reactivity, element) = x
+
+      assert list.first(event.path)
+        |> result.map(fn(e) { dom.element_eq(e, element) })
+        |> result.unwrap(False)
+
+      let event =
+        dom.Event(list.rest(event.path) |> result.unwrap([]), event.content)
 
       let #(state, reactivity, out) =
         state |> widget.handle_event(reactivity, handler, element, Nil, event)
@@ -43,6 +52,11 @@ pub fn my_widget() -> widget.Widget(in, String) {
       #("style", "color: blue"),
     ],
     fn(in, event) { Some("hello") },
-    [html.text("the one")],
+    [
+      html.text("the one"),
+      html.element("button", [], fn(in, event) { Some("cliiick") }, [
+        html.text("click me"),
+      ]),
+    ],
   )
 }
