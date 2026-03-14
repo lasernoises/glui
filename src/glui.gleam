@@ -1,10 +1,12 @@
 import dom
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{Some}
 import gleam/result
 import reactivity
 import widget
+import widgets/component.{type ComponentInput, ComponentOutput}
 import widgets/html
 
 pub fn main() -> Nil {
@@ -38,6 +40,9 @@ pub fn main() -> Nil {
         option.None -> Nil
       }
 
+      let #(state, reactivity) =
+        state |> widget.update(reactivity, handler, element, Nil)
+
       #(state, reactivity, element)
     },
   )
@@ -46,17 +51,36 @@ pub fn main() -> Nil {
 }
 
 pub fn my_widget() -> widget.Widget(in, String) {
-  html.element(
-    "div",
-    [
-      #("style", "color: blue"),
-    ],
-    fn(in, event) { Some("hello") },
-    [
-      html.text("the one"),
-      html.element("button", [], fn(in, event) { Some("cliiick") }, [
-        html.text("click me"),
-      ]),
-    ],
+  component.component(
+    fn(reactivity) { reactivity.rx(reactivity, 0) },
+    html.element(
+      "div",
+      [
+        #("style", "color: blue"),
+      ],
+      fn(in, event) { option.None },
+      [
+        html.text("the one"),
+        html.rx_text(fn(a: ComponentInput(_, _)) {
+          reactivity.rx_get(a.state, int.to_string)
+        }),
+        html.element(
+          "button",
+          [],
+          fn(in, event) {
+            Some(ComponentOutput(
+              fn(a) {
+                use a <- reactivity.rx_update(a, fn(x) { x + 1 })
+                reactivity.finish(a)
+              },
+              "Click",
+            ))
+          },
+          [
+            html.text("click me"),
+          ],
+        ),
+      ],
+    ),
   )
 }

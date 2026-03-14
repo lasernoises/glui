@@ -1,6 +1,7 @@
 import dom
 import gleam/list
 import gleam/option.{type Option, None}
+import reactivity.{type Get}
 import widget.{type Widget}
 
 pub fn element(
@@ -107,6 +108,30 @@ pub fn text(text: String) -> Widget(in, out) {
       #(Nil, element, reactivity)
     },
     update: fn(_, reactivity, _, _, _in) { #(Nil, reactivity) },
+    handle_event: fn(_, reactivity, _, _, _in, _event) {
+      #(Nil, reactivity, None)
+    },
+  )
+}
+
+pub fn rx_text(text: fn(in) -> Get(String)) -> Widget(in, out) {
+  widget.new(
+    create: fn(reactivity, _, in) {
+      let #(reactivity, text) = text(in).get(reactivity)
+
+      let element =
+        dom.create_element("span")
+        |> dom.set_text_content(text)
+
+      #(Nil, element, reactivity)
+    },
+    update: fn(_, reactivity, _, element, in) {
+      let #(reactivity, text) = text(in).get(reactivity)
+
+      element |> dom.set_text_content(text)
+
+      #(Nil, reactivity)
+    },
     handle_event: fn(_, reactivity, _, _, _in, _event) {
       #(Nil, reactivity, None)
     },
